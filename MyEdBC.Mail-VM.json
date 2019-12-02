@@ -1,4 +1,4 @@
-{
+﻿{
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {    
@@ -18,12 +18,16 @@
   "variables": {
     "vmName": "mbcprd01mail01",
     "nicResourceSuffix": "-nic",
+    "pipResourceSuffix": "-pip",
     "nicName": "[concat(variables('vmName'), variables('nicResourceSuffix'))]",
     "adminUsername": "fujitsuadmin",
     "dnsLabelPrefix": "rh7image",
     "virtualNetworkResourceGroup": "MBC-PRD01-Network-RG",
-    "virtualNetworkName": "mbcprd01-hub-vnet",
-    "subNetName": "mbcprd01-hub-services-subnet",
+    "virtualNetworkName": "mbcprd01-dmz-vnet",
+    "subNetName": "mbcprd01-dmz-smtp-subnet",
+    "publicIPAddressName": "[concat(variables('vmName'), variables('pipResourceSuffix'))]",
+    "publicIPSKU": "Standard",
+    "publicIPTYPE": "Static",
     "osDiskResourceSuffix": "-osdisk",
     "imageReference": "/subscriptions/1bb5cf39-6ece-4d34-8f0c-5fcd41fb55f6/resourceGroups/MBC-PRD01-IMAGE-RG/providers/Microsoft.Compute/galleries/mbcprd01image/images/RHEL7_Custom/versions/7.6.20191128",
     "vnetID": "[resourceId(variables('virtualNetworkResourceGroup'),'Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
@@ -35,6 +39,10 @@
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[variables('nicName')]",
       "location": "[resourceGroup().location]",
+      "tags": {
+        "Environment": "Production",
+        "ServiceType": "Service"
+    },
       "properties": {
         "ipConfigurations": [
           {
@@ -42,6 +50,9 @@
             "properties": {
               
               "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                 "id": "[resourceId ('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]"
+              },
               "subnet": {
                 "id": "[variables('subnetId')]"
               }
@@ -50,11 +61,28 @@
         ]
       }
     },
+  {
+    "apiVersion": "2019-09-01",
+    "type": "Microsoft.Network/publicIPAddresses",
+    "name": "[variables('publicIPAddressName')]",
+    "location": "[resourceGroup().location]",
+    "sku":{
+     "name": "[variables('publicIPSKU')]"
+    },
+    "properties": {
+      "publicIPAllocationMethod": "[variables('publicIPTYPE')]",
+   
+    }
+  },
     {
       "apiVersion": "2019-03-01",
       "type": "Microsoft.Compute/virtualMachines",
       "name": "[variables('vmName')]",
       "location": "[resourceGroup().location]",
+      "tags": {
+        "Environment": "Production",
+        "ServiceType": "Service"
+      },
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', variables('nicName'))]"
       ],
